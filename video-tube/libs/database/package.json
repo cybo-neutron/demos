@@ -1,0 +1,38 @@
+{
+  "name": "@video-tube/database",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@video-tube/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "@video-tube/source": "./src/schema/index.ts",
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js",
+      "default": "./dist/schema/index.js"
+    },
+    "./repos": {
+      "@video-tube/source": "./src/repos/index.ts",
+      "types": "./dist/repos/index.d.ts",
+      "import": "./dist/repos/index.js",
+      "default": "./dist/repos/index.js"
+    }
+  },
+  "dependencies": {
+    "drizzle-zod": "^0.8.3",
+    "pg": "^8.20.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.18.0",
+    "drizzle-kit": "^0.31.10"
+  }
+}
