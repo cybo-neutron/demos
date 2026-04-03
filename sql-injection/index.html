@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Injection Lab | Security Playground</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #3b82f6;
+            --brand-secondary: #8b5cf6;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body class="text-slate-200 py-12 px-4 flex flex-col items-center">
+    <!-- Header -->
+    <header class="mb-12 text-center max-w-2xl">
+        <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent mb-4">
+            SQL Injection Lab
+        </h1>
+        <p class="text-slate-400">
+            A safe playground to observe and test common SQL injection vulnerabilities. 
+            <span class="text-red-400/80 block mt-2 text-sm font-medium">⚠️ FOR EDUCATIONAL PURPOSES ONLY ⚠️</span>
+        </p>
+    </header>
+
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Input Section -->
+        <div class="space-y-8">
+            <!-- Create User Card -->
+            <section class="glass rounded-2xl p-6 shadow-2xl transition-all hover:shadow-blue-500/10">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-blue-500/20 rounded-lg">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                    </div>
+                    <h2 class="text-xl font-semibold">User Registration</h2>
+                </div>
+                
+                <form id="insertForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 px-1">Name</label>
+                        <input name="name" type="text" placeholder="e.g. John Doe" 
+                            class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-slate-600">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 px-1">Email</label>
+                            <input name="email" type="text" placeholder="john@example.com"
+                                class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 px-1">Password</label>
+                            <input name="password" type="text" placeholder="••••••••"
+                                class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-slate-600">
+                        </div>
+                    </div>
+                    <button type="submit" 
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 py-3 rounded-xl font-semibold transition-all transform active:scale-[0.98] shadow-lg shadow-blue-900/20">
+                        Register Account
+                    </button>
+                </form>
+            </section>
+
+            <!-- Search User Card -->
+            <section class="glass rounded-2xl p-6 shadow-2xl transition-all hover:shadow-violet-500/10">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-violet-500/20 rounded-lg">
+                        <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-violet-100">Find Member</h2>
+                </div>
+                
+                <form id="getForm" class="flex gap-3">
+                    <div class="flex-1">
+                        <input name="name" type="text" placeholder="Search by name..." 
+                            class="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all placeholder:text-slate-600">
+                    </div>
+                    <button type="submit" 
+                        class="bg-violet-600 hover:bg-violet-500 px-6 py-3 rounded-xl font-semibold transition-all transform active:scale-[0.98] shadow-lg shadow-violet-900/20">
+                        Search
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <!-- Output Section -->
+        <div class="space-y-6">
+            <div class="glass rounded-2xl p-6 h-full flex flex-col">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-emerald-500/20 rounded-lg">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h2 class="text-xl font-semibold">Response Terminal</h2>
+                    </div>
+                    <button id="clearBtn" class="text-xs text-slate-500 hover:text-slate-300 transition-colors uppercase tracking-widest font-bold">Clear</button>
+                </div>
+
+                <div id="terminal" class="code-font bg-black/40 rounded-xl border border-slate-800 p-4 flex-1 min-h-[400px] overflow-auto whitespace-pre-wrap text-sm text-emerald-400/90 leading-relaxed">
+                    <div class="text-slate-600 italic">// Awaiting input...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const terminal = document.getElementById('terminal');
+        const clearBtn = document.getElementById('clearBtn');
+        const insertForm = document.getElementById('insertForm');
+        const getForm = document.getElementById('getForm');
+
+        function log(data, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `mb-4 pb-2 border-b border-slate-800/50 last:border-0`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-emerald-400' : 'text-blue-400');
+            
+            entry.innerHTML = `
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-[10px] text-slate-600">[${timestamp}]</span>
+                    <span class="text-[10px] font-bold uppercase ${color}">${type}</span>
+                </div>
+                <code class="block overflow-x-auto">${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}</code>
+            `;
+            
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+            if (terminal.querySelector('.italic')) terminal.querySelector('.italic').remove();
+        }
+
+        clearBtn.onclick = () => {
+            terminal.innerHTML = '<div class="text-slate-600 italic">// Awaiting input...</div>';
+        };
+
+        insertForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(insertForm);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                log(`POST /insert_user - Sending data...`, 'info');
+                const response = await fetch('http://localhost:3500/insert_user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                log(result, response.ok ? 'success' : 'error');
+            } catch (err) {
+                log(err.message, 'error');
+            }
+        };
+
+        getForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const name = new FormData(getForm).get('name');
+            
+            try {
+                log(`GET /get_user?name=${name}`, 'info');
+                const response = await fetch(`http://localhost:3500/get_user?name=${encodeURIComponent(name)}`);
+                const result = await response.json();
+                log(result, 'success');
+            } catch (err) {
+                log(err.message, 'error');
+            }
+        };
+    </script>
+</body>
+</html>
