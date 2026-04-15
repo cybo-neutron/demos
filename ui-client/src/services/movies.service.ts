@@ -34,10 +34,11 @@ export interface GetMovieCursorPaginationParams extends Omit<
 }
 
 export interface Metadata {
-  total: number;
-  page: number;
+  total?: number;
+  page?: number;
   pageSize: number;
-  totalPages: number;
+  totalPages?: number;
+  cursor?: Record<string, { op: string; value: string }> | null;
 }
 
 export interface GetMoviesResponse {

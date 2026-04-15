@@ -29,6 +29,13 @@
       "when": 1775155653222,
       "tag": "0003_stiff_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775670465092,
+      "tag": "0004_wealthy_millenium_guard",
+      "breakpoints": true
     }
   ]
 }

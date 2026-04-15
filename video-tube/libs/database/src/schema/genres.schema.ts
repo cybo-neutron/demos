@@ -16,7 +16,7 @@ import z from "zod";
 
 export const GenreTable = pgTable("genre", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
-  name: text("name"),
+  name: text("name").notNull(),
   tmdbGenreId: text("tmdb_genre_id"),
 
   isActive: boolean("is_active").notNull().default(true),

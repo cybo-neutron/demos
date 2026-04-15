@@ -6,6 +6,7 @@ import {
   pgTable,
   boolean,
   timestamp,
+  bigint,
 } from "drizzle-orm/pg-core";
 import {
   createInsertSchema,
@@ -18,16 +19,16 @@ import { GenreTable } from "./genres.schema.js";
 
 export const MovieGenreTable = pgTable("movie_genre", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
-  movieId: bigserial("movie_id", { mode: "number" }).references(
+  movieId: bigint("movie_id", { mode: "number" }).references(
     () => MovieTable.id,
   ),
-  genreId: bigserial("genre_id", { mode: "number" }).references(
+  genreId: bigint("genre_id", { mode: "number" }).references(
     () => GenreTable.id,
   ),
 
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 const MovieGenreSelectSchema = createSelectSchema(MovieGenreTable);

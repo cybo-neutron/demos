@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useGetMovies } from "@/hooks/useGetMovies";
-import { Film } from "lucide-react";
+import { useGetMovies, useInfiniteMovies } from "@/hooks/useGetMovies";
+import { Film, LayoutGrid, Zap, ZapOff, Infinity as InfinityIcon, Boxes } from "lucide-react";
 import type { Movie } from "@/services/movies.service";
 import MovieCard from "./MovieCard";
+import { Button } from "@/components/ui/button";
 
 import {
   Pagination,
@@ -16,12 +17,48 @@ import {
 
 const AllMovies = () => {
   const [page, setPage] = useState(1);
+  const [isInfiniteScroll, setIsInfiniteScroll] = useState(false);
+  const [isCursorBased, setIsCursorBased] = useState(false);
   const pageSize = 20;
 
-  const { data, isLoading, isError, error, isPlaceholderData } = useGetMovies({
-    page,
+  const handleCursorToggle = () => {
+    const newVal = !isCursorBased;
+    setIsCursorBased(newVal);
+    if (newVal) {
+      setIsInfiniteScroll(true);
+    }
+  };
+
+  const params = {
     pageSize,
+  };
+
+  // Using standard pagination
+  const { 
+    data: pagedData, 
+    isLoading: isPagedLoading, 
+    isError: isPagedError, 
+    error: pagedError, 
+    isPlaceholderData 
+  } = useGetMovies({ 
+    page, 
+    ...params 
   });
+
+  // Using infinite scroll (handles both offset and cursor)
+  const {
+    data: infiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isInfiniteLoading,
+    isError: isInfiniteError,
+    error: infiniteError,
+  } = useInfiniteMovies(params, isCursorBased);
+
+  const isLoading = isInfiniteScroll ? isInfiniteLoading : isPagedLoading;
+  const isError = isInfiniteScroll ? isInfiniteError : isPagedError;
+  const error = isInfiniteScroll ? infiniteError : pagedError;
 
   if (isLoading) {
     return (
@@ -40,8 +77,17 @@ const AllMovies = () => {
     );
   }
 
-  const movies: Movie[] = data?.payload || [];
-  const metadata = data?.metadata;
+  let movies: Movie[] = [];
+  let metadata;
+
+  if (isInfiniteScroll) {
+    movies = infiniteData?.pages.flatMap((page) => page.payload) || [];
+    metadata = infiniteData?.pages[0].metadata;
+  } else {
+    movies = pagedData?.payload || [];
+    metadata = pagedData?.metadata;
+  }
+
   const totalPages = metadata?.totalPages || 0;
 
   return (
@@ -55,15 +101,61 @@ const AllMovies = () => {
           Explore Movies
         </h1>
 
-        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+        <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
           Discover latest blockbusters and timeless classics from our curated
           collection.
         </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex items-center p-1 bg-muted/50 rounded-xl border border-border/50">
+            <Button
+              variant={isCursorBased ? "default" : "ghost"}
+              size="sm"
+              className="rounded-lg gap-2"
+              onClick={handleCursorToggle}
+            >
+              {isCursorBased ? <Zap className="w-4 h-4 fill-primary" /> : <ZapOff className="w-4 h-4" />}
+              Cursor based
+            </Button>
+            <Button
+              variant={!isCursorBased ? "default" : "ghost"}
+              size="sm"
+              className="rounded-lg gap-2"
+              onClick={() => setIsCursorBased(false)}
+            >
+              <Boxes className="w-4 h-4" />
+              Offset based
+            </Button>
+          </div>
+
+          <div className="flex items-center p-1 bg-muted/50 rounded-xl border border-border/50">
+            <Button
+              variant={isInfiniteScroll ? "default" : "ghost"}
+              size="sm"
+              className="rounded-lg gap-2"
+              disabled={isCursorBased}
+              onClick={() => setIsInfiniteScroll(true)}
+            >
+              <InfinityIcon className="w-4 h-4" />
+              Infinite Scroll
+            </Button>
+            <Button
+              variant={!isInfiniteScroll ? "default" : "ghost"}
+              size="sm"
+              className="rounded-lg gap-2"
+              disabled={isCursorBased}
+              onClick={() => setIsInfiniteScroll(false)}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Standard Paging
+            </Button>
+          </div>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {movies.map((movie: Movie) => (
-          <MovieCard key={movie.id} movie={movie} />
+        {movies.map((movie: Movie, index: number) => (
+          <MovieCard key={`${movie.id}-${index}`} movie={movie} />
         ))}
       </div>
 
@@ -73,7 +165,26 @@ const AllMovies = () => {
         </div>
       )}
 
-      {totalPages > 1 && (
+      {isInfiniteScroll && hasNextPage && (
+        <div className="flex justify-center mt-12 py-8 border-t border-border/50">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="rounded-full px-8 gap-2 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+          >
+            {isFetchingNextPage ? (
+              <div className="w-5 h-5 border-2 border-current border-t-transparent animate-spin rounded-full" />
+            ) : (
+              <InfinityIcon className="w-5 h-5" />
+            )}
+            Load more movies
+          </Button>
+        </div>
+      )}
+
+      {!isInfiniteScroll && totalPages > 1 && (
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-border pt-8">
           <div className="text-sm text-muted-foreground">
             Showing <span className="font-medium text-foreground">{(page - 1) * pageSize + 1}</span> to{" "}
@@ -137,9 +248,6 @@ const AllMovies = () => {
           </Pagination>
         </div>
       )}
-
-
-
     </div>
   );
 };

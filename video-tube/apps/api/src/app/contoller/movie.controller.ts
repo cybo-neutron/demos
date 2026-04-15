@@ -68,47 +68,58 @@ export async function getAllMoviesCursorPagination(
   req: FastifyRequest,
   reply: FastifyReply,
 ) {
-  const schema = z.object({
-    page: z.coerce.number(),
-    pageSize: z.coerce.number(),
-    search: z.string().optional(),
-    genres: z.array(z.string()).optional(),
-    countries: z.array(z.string()).optional(),
-    companies: z.array(z.string()).optional(),
-    sortBy: z.array(z.tuple([z.string(), z.enum(["asc", "desc"])])).optional(),
-    cursor: z.any(),
-    // releaseDateRange
-  });
+  try {
+    const schema = z.object({
+      pageSize: z.coerce.number(),
+      search: z.string().optional(),
+      genres: z.array(z.string()).optional(),
+      countries: z.array(z.string()).optional(),
+      companies: z.array(z.string()).optional(),
+      sortBy: z
+        .array(z.tuple([z.string(), z.enum(["asc", "desc"])]))
+        .optional(),
+      cursor: z.any(),
+      // releaseDateRange
+    });
 
-  const parsedData = schema.safeParse(req.body);
+    const parsedData = schema.safeParse(req.body);
 
-  if (!parsedData.success) {
-    return reply.status(400).send({
-      message: "Invalid data",
-      errors: parsedData.error.issues,
+    if (!parsedData.success) {
+      return reply.status(400).send({
+        message: "Invalid data",
+        errors: parsedData.error.issues,
+      });
+    }
+
+    const { pageSize, search, genres, countries, companies, sortBy, cursor } =
+      parsedData.data;
+
+    const { movies, cursor: newCursor } =
+      await getAllMoviesCursorPaginationRepo({
+        pageSize,
+        search,
+        cursor,
+      });
+
+    const moviesResult = movies.map((movie: any) => {
+      return {
+        ...movie,
+        imageUrl: movie.posterPath
+          ? `https://image.tmdb.org/t/p/original${movie.posterPath}`
+          : "",
+      };
+    });
+
+    reply.status(200).send({
+      payload: moviesResult,
+      metadata: {
+        cursor: newCursor,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    reply.status(500).send({
+      message: "Something went wrong",
     });
   }
-
-  const {
-    page,
-    pageSize,
-    search,
-    genres,
-    countries,
-    companies,
-    sortBy,
-    cursor,
-  } = parsedData.data;
-
-  const { movies } = await getAllMoviesCursorPaginationRepo({
-    page,
-    pageSize,
-    search,
-    cursor,
-  });
-
-  reply.send({
-    payload: movies,
-    metadata: {},
-  });
 }

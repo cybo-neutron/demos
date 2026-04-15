@@ -6,7 +6,22 @@ createMovie()
 deleteMovie()
 */
 
-import { and, asc, count, desc, eq, gt, gte, lt, lte, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  lt,
+  lte,
+  or,
+  SQL,
+  sql,
+} from "drizzle-orm";
 import { db } from "../lib/database.js";
 import {
   MovieInsertType,
@@ -15,6 +30,7 @@ import {
   MovieUpdateType,
 } from "../schema/movie.schema.js";
 import { CursorType, isValidCursor } from "../utils/cursor_validity.js";
+import { MovieGenreTable } from "../schema/movie_genre.schema.js";
 
 export async function getMovieDetails({ id }: { id: string }) {
   const movie = db
@@ -33,11 +49,16 @@ export async function getAllMovies({
     ["releaseDate", "desc"],
     ["id", "desc"],
   ],
+  genres,
 }: {
   page: number;
   pageSize: number;
   search?: string;
   sortBy?: [keyof MovieSelectType, "asc" | "desc"][];
+  genres?: {
+    genreIds: string[];
+    useJoin: boolean;
+  };
 }) {
   const sortArr =
     sortBy?.map(([key, order]) => {
@@ -45,15 +66,42 @@ export async function getAllMovies({
       return order === "desc" ? desc(column) : asc(column);
     }) ?? [];
 
-  const result = await db.transaction(async (tx) => {
-    let movies: MovieSelectType[] = [];
+  const conditions: SQL[] = [];
 
-    movies = await tx
-      .select()
-      .from(MovieTable)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy(...sortArr);
+  const result = await db.transaction(async (tx) => {
+    let query: any;
+
+    query = tx.select().from(MovieTable).$dynamic();
+
+    query = query.limit(pageSize);
+
+    query = query.offset((page - 1) * pageSize);
+
+    query = query.orderBy(...sortArr);
+
+    if (genres?.genreIds && genres?.genreIds.length > 0) {
+      if (genres.useJoin) {
+        query = query.innerJoin(
+          MovieGenreTable,
+          eq(MovieTable.id, MovieGenreTable.movieId),
+        );
+      } else {
+        conditions.push(sql`
+          SELECT 1
+          FROM jsonb_array_elements(${MovieTable.genres}) AS elem
+          WHERE (elem->>'id')::int = ANY(${genres.genreIds})`);
+      }
+    }
+
+    if (search) {
+      conditions.push(ilike(MovieTable.title, `%${search}%`));
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const movies: MovieSelectType[] = await query;
 
     const totalCountResult = await tx
       .select({ count: count() })
@@ -69,7 +117,6 @@ export async function getAllMovies({
 }
 
 export async function getAllMoviesCursorPagination({
-  page,
   pageSize,
   search,
   sortBy = [
@@ -77,12 +124,17 @@ export async function getAllMoviesCursorPagination({
     ["id", "desc"],
   ],
   cursor,
+  genres,
 }: {
-  page: number;
   pageSize: number;
   search?: string;
   sortBy?: [keyof MovieSelectType, "asc" | "desc"][];
-  cursor: Partial<Record<keyof MovieSelectType, CursorType>> | null;
+  // cursor: Partial<Record<keyof MovieSelectType, CursorType>> | null;
+  cursor: { releaseDate: CursorType; id: CursorType } | null;
+  genres?: {
+    genreIds: string[];
+    useJoin: boolean;
+  };
 }) {
   const sortArr =
     sortBy?.map(([key, order]) => {
@@ -90,38 +142,63 @@ export async function getAllMoviesCursorPagination({
       return order === "desc" ? desc(column) : asc(column);
     }) ?? [];
 
-  const result = await db.transaction(async (tx) => {
-    let movies: MovieSelectType[] = [];
-    let whereArr = [];
+  // const joinArr = [];
+  // if (genres?.genreIds && genres.useJoin) {
+  //   joinArr.push(
+  //     innerJoin(MovieGenreTable, eq(MovieTable.id, MovieGenreTable.movieId)),
+  //   );
+  // }
 
-    if (cursor) {
-      const cursorValid = isValidCursor(sortBy, cursor);
+  const conditions: SQL[] = [];
+  if (cursor) {
+    // const cursorValid = isValidCursor(sortBy, cursor);
 
-      if (!cursorValid) {
-        throw new Error("Invalid cursor");
-      }
+    // if (!cursorValid) {
+    //   throw new Error("Invalid cursor");
+    // }
 
-      whereArr.push(
+    if (cursor.releaseDate && cursor.id) {
+      conditions.push(
         or(
           and(
-            eq(MovieTable.releaseDate, cursor["releaseDate"].value),
-            lt(MovieTable.id, Number(cursor["id"].value)),
+            eq(MovieTable.releaseDate, cursor.releaseDate.value),
+            lt(MovieTable.id, Number(cursor.id.value)),
           ),
-          lt(MovieTable.releaseDate, cursor["releaseDate"].value),
-        ),
+          lt(MovieTable.releaseDate, cursor.releaseDate.value),
+        ) as SQL,
       );
     }
+  }
 
-    movies = await tx
-      .select()
-      .from(MovieTable)
-      .where(and(...whereArr))
-      .limit(pageSize)
-      .orderBy(...sortArr);
+  const result = await db.transaction(async (tx) => {
+    let query: any;
 
-    const totalCountResult = await tx
-      .select({ count: count() })
-      .from(MovieTable);
+    query = tx.select().from(MovieTable).$dynamic();
+
+    query = query.limit(pageSize);
+
+    query = query.orderBy(...sortArr);
+
+    if (genres?.genreIds && genres?.genreIds.length > 0) {
+      if (genres.useJoin) {
+        query = query.innerJoin(
+          MovieGenreTable,
+          eq(MovieTable.id, MovieGenreTable.movieId),
+        );
+        conditions.push(
+          eq(MovieGenreTable.genreId, Number(genres.genreIds[0])),
+        );
+      } else {
+        conditions.push(sql`
+          SELECT 1
+          FROM jsonb_array_elements(${MovieTable.genres}) AS elem
+          WHERE (elem->>'id')::int = ANY(${genres.genreIds})`);
+      }
+    }
+
+    query = query.where(and(...conditions));
+
+    const movies = await query;
 
     let newCursor: Partial<Record<keyof MovieSelectType, CursorType>> | null =
       null;
@@ -141,7 +218,6 @@ export async function getAllMoviesCursorPagination({
 
     return {
       movies,
-      total: totalCountResult[0].count,
       cursor: newCursor,
     };
   });

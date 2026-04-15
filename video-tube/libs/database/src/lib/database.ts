@@ -6,7 +6,15 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL!,
 });
 
-export const db = drizzle(pool);
+export const db = drizzle(pool, {
+  // logger: {
+  //   logQuery(query, params) {
+  //     console.info("🔍 [DRIZZLE QUERY]:", query);
+  //     if (params?.length) console.info("📦 [PARAMS]:", params);
+  //   },
+  // },
+  logger : true
+});
 
 export async function connectDB() {
   try {
